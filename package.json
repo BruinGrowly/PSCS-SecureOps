@@ -10,7 +10,7 @@
     "build": "vinext build",
     "start": "vinext start",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "test": "node --experimental-strip-types --test tests/secureops.test.ts",
+    "test": "node --experimental-strip-types --test tests/secureops.test.ts tests/webmcp.test.ts",
     "verify": "npm run test && npm run build"
   },
   "dependencies": {

@@ -39,7 +39,7 @@ The registered tools are:
 - `execute_approved_action` — attempts a demo effect through exact-grant and replay enforcement.
 - `get_security_trace` — returns purpose retention, authority standing, binding, reason codes, and recovery.
 
-There is deliberately no `grant_authority` WebMCP tool. Grants are created only by the human-facing host path and are never derived from ticket content or agent output.
+There is deliberately no `grant_authority` WebMCP tool. A human must explicitly issue or reissue each five-minute, single-use demo grant through the page. Grants are never derived from ticket content or agent output, and the page and WebMCP tools share the same replay ledger.
 
 ## Structural boundary
 

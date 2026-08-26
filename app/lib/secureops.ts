@@ -106,10 +106,11 @@ export async function payloadDigest(payload: string): Promise<string> {
 export async function issueHumanGrant(
   scenario: Scenario,
   now = Date.now(),
+  issuanceId = crypto.randomUUID(),
 ): Promise<AuthorityGrant> {
   return {
-    grantId: `human-grant:${scenario.id}`,
-    authoritySourceId: 'operator-session:wellington',
+    grantId: `human-grant:${scenario.id}:${issuanceId}`,
+    authoritySourceId: 'operator-session:demo',
     sessionId: 'secureops-demo-session',
     ticketId: scenario.id,
     operation: scenario.authorized.operation,

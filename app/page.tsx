@@ -18,33 +18,29 @@ export default function Home() {
   const [proposal, setProposal] = useState<Consequence>(scenarios[1].proposal);
   const [decision, setDecision] = useState<SecurityDecision | null>(null);
   const [grants, setGrants] = useState(new Map<string, AuthorityGrant>());
-  const [grantsReady, setGrantsReady] = useState(false);
+  const [executionLedger] = useState(() => new Set<string>());
+  const [clockNow, setClockNow] = useState(() => Date.now());
   const [webMCPStatus, setWebMCPStatus] = useState<WebMCPStatus>('checking');
   const grantStore = useRef(new Map<string, AuthorityGrant>());
-  const uiLedger = useRef(new Set<string>());
   const scenario = scenarios[selected];
   const grant = grants.get(scenario.id) ?? null;
+  const grantRemainingSeconds = grant ? Math.max(0, Math.ceil((grant.expiresAt - clockNow) / 1_000)) : 0;
+  const grantConsumed = grant ? executionLedger.has(grant.grantId) : false;
+  const grantActive = Boolean(grant && grantRemainingSeconds > 0 && !grantConsumed);
   const isAuthorizedProposal = proposal.operation === scenario.authorized.operation
     && proposal.target === scenario.authorized.target
     && proposal.payload === scenario.authorized.payload;
 
   useEffect(() => {
-    let active = true;
-    Promise.all(scenarios.map(async (item) => [item.id, await issueHumanGrant(item)] as const)).then((entries) => {
-      if (!active) return;
-      const nextGrants = new Map(entries);
-      grantStore.current = nextGrants;
-      setGrants(nextGrants);
-      setGrantsReady(true);
-    });
-    return () => { active = false; };
+    const timer = window.setInterval(() => setClockNow(Date.now()), 1_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
-    if (!grantsReady) return;
     let controller: AbortController | null = null;
     registerSecureOpsTools({
       getGrant: (ticketId) => grantStore.current.get(ticketId) ?? null,
+      getExecutionLedger: () => executionLedger,
       onDecision: (nextDecision, nextProposal) => {
         const index = scenarios.findIndex((item) => item.id === nextDecision.ticketId);
         if (index >= 0) setSelected(index);
@@ -56,21 +52,29 @@ export default function Home() {
       setWebMCPStatus(registered ? 'connected' : 'unavailable');
     }).catch(() => setWebMCPStatus('error'));
     return () => controller?.abort();
-  }, [grantsReady]);
+  }, [executionLedger]);
 
   function chooseScenario(index: number) {
     setSelected(index);
     setProposal(scenarios[index].proposal);
     setDecision(null);
-    uiLedger.current.clear();
+  }
+
+  async function issueGrant() {
+    const nextGrant = await issueHumanGrant(scenario);
+    const nextGrants = new Map(grantStore.current);
+    nextGrants.set(scenario.id, nextGrant);
+    grantStore.current = nextGrants;
+    setGrants(nextGrants);
+    setClockNow(Date.now());
+    setDecision(null);
   }
 
   async function run(nextProposal = proposal) {
-    if (!grant) return;
     setProposal(nextProposal);
     setDecision(await inspectSecureOps(scenario, nextProposal, grant, {
       consume: true,
-      ledger: uiLedger.current,
+      ledger: executionLedger,
     }));
   }
 
@@ -79,7 +83,21 @@ export default function Home() {
     : webMCPStatus === 'checking'
       ? 'Detecting WebMCP'
       : 'Open in a WebMCP browser';
-  const buttonCopy = decision?.effectPermitted ? 'Replay same grant' : 'Run through PSCS';
+  const buttonCopy = grantConsumed ? 'Replay same grant' : 'Run through PSCS';
+  const grantStatus = !grant
+    ? 'Not issued'
+    : grantConsumed
+      ? 'Consumed'
+      : grantRemainingSeconds > 0
+        ? `Active · ${Math.floor(grantRemainingSeconds / 60)}:${String(grantRemainingSeconds % 60).padStart(2, '0')}`
+        : 'Expired';
+  const decisionLabel = decision
+    ? decision.verdict === 'QUARANTINE'
+      ? 'BLOCK / QUARANTINE'
+      : decision.disposition === 'allow_with_quarantine'
+        ? 'ALLOW + QUARANTINE'
+        : decision.verdict
+    : 'READY TO VERIFY';
   const displayTrace = decision?.trace ?? [
     { id: 'recognition', label: 'Source recognized', detail: 'Ticket ≠ administrator', status: 'pass' as const },
     { id: 'purpose', label: 'Purpose retained', detail: 'Original support task intact', status: 'pass' as const },
@@ -150,7 +168,7 @@ export default function Home() {
                 <div><dt>payload</dt><dd>{proposal.payload}</dd></div>
               </dl>
               <div className="action-stack">
-                <button className="primary-action" type="button" onClick={() => run()} disabled={!grant}>{buttonCopy}<span>→</span></button>
+                <button className="primary-action" type="button" onClick={() => run()}>{buttonCopy}<span>→</span></button>
                 {decision && !decision.permitted && !isAuthorizedProposal && (
                   <button className="recovery-action" type="button" onClick={() => run(scenario.authorized)}>Run preserved legitimate task</button>
                 )}
@@ -160,15 +178,18 @@ export default function Home() {
             <article className="panel authority-panel">
               <div className="panel-heading">
                 <div><span className="step">03</span><p><b>Human authority</b>Exact runtime grant</p></div>
-                <span className="trust-tag trusted">TRUSTED</span>
+                <span className="trust-tag trusted">TRUSTED PATH</span>
               </div>
               <dl className="grant-fields">
                 <div><dt>operation</dt><dd>{scenario.authorized.operation}</dd></div>
                 <div><dt>target</dt><dd>{scenario.authorized.target}</dd></div>
-                <div><dt>payload digest</dt><dd>{grant ? `${grant.payloadDigest.slice(0, 14)}…` : 'issuing…'}</dd></div>
-                <div><dt>scope</dt><dd>single use · 5 min</dd></div>
+                <div><dt>payload digest</dt><dd>{grant ? `${grant.payloadDigest.slice(0, 14)}…` : 'not issued'}</dd></div>
+                <div><dt>grant status</dt><dd>{grantStatus}</dd></div>
               </dl>
-              <p className="authority-source"><span>✓</span> Issued outside agent-accessible tools</p>
+              <div className="grant-action">
+                <button type="button" onClick={issueGrant}>{grant ? 'Reissue human grant' : 'Issue human grant'}</button>
+                <p className="authority-source"><span>{grantActive ? '✓' : 'i'}</span> Human-only control · never exposed as a WebMCP tool</p>
+              </div>
             </article>
           </div>
 
@@ -176,7 +197,7 @@ export default function Home() {
             <div className="trace-head">
               <div><span className="step">04</span><p><b>PSCS security trace</b>Meaning preserved · consequence governed</p></div>
               <span className={`decision ${decision ? decision.disposition : 'pending'}`}>
-                {decision ? (decision.disposition === 'block' ? 'BLOCK / QUARANTINE' : decision.disposition.replaceAll('_', ' ').toUpperCase()) : 'READY TO VERIFY'}
+                {decisionLabel}
               </span>
             </div>
             <div className="trace-steps">

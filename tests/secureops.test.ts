@@ -68,6 +68,25 @@ test('a consumed runtime grant cannot be replayed', async () => {
   assert.deepEqual(second.reasonCodes, ['grant_replay']);
 });
 
+test('each human issuance has a unique grant identity and generic authority source', async () => {
+  const scenario = scenarios[0];
+  const first = await issueHumanGrant(scenario, 1_000, 'issuance-a');
+  const second = await issueHumanGrant(scenario, 1_000, 'issuance-b');
+  assert.notEqual(first.grantId, second.grantId);
+  assert.equal(first.authoritySourceId, 'operator-session:demo');
+});
+
+test('a newly issued grant works after the prior grant is consumed', async () => {
+  const scenario = scenarios[0];
+  const ledger = new Set<string>();
+  const firstGrant = await issueHumanGrant(scenario, 1_000, 'issuance-a');
+  const secondGrant = await issueHumanGrant(scenario, 1_000, 'issuance-b');
+  const first = await inspectSecureOps(scenario, scenario.proposal, firstGrant, { consume: true, ledger, now: 1_001 });
+  const reissued = await inspectSecureOps(scenario, scenario.proposal, secondGrant, { consume: true, ledger, now: 1_001 });
+  assert.equal(first.effectPermitted, true);
+  assert.equal(reissued.effectPermitted, true);
+});
+
 test('missing and expired authority fail closed', async () => {
   const scenario = scenarios[0];
   const missing = await inspectSecureOps(scenario, scenario.proposal, null);

@@ -15,14 +15,7 @@ PSCS SecureOps lets browser agents use untrusted web content while independently
 
 ## Demonstration arc (under three minutes)
 
-1. **0:00–0:20 — Problem.** “A webpage can tell an agent what to do. Why should that give the webpage authority to cause the action?”
-2. **0:20–0:45 — Normal work.** Open `INC-0042`; run the exact password-reset proposal; show the matching human grant and `ALLOW`.
-3. **0:45–1:15 — Direct injection.** Open `INC-0043`; run the injected group-add proposal; show operation, target, and payload mismatch; show `BLOCK / QUARANTINE`.
-4. **1:15–1:35 — Recovery.** Click “Run preserved legitimate task”; show the original reset can still proceed.
-5. **1:35–1:55 — Authority impersonation.** Open `INC-0044`; show that claimed system policy does not change the ticket's source role.
-6. **1:55–2:20 — Legitimate hostile text.** Open `INC-0045`; show authorized analysis is allowed while the quoted attack remains quarantined.
-7. **2:20–2:40 — Replay.** Re-run an allowed grant; show single-use replay rejection.
-8. **2:40–2:55 — Close.** “Meaning informs. Authority decides.”
+Use the timed narration, exact agent prompts, recording setup, and upload checks in [`VIDEO_SCRIPT.md`](VIDEO_SCRIPT.md). The recording must visibly show ChatGPT invoking the WebMCP tools—not only the page buttons.
 
 ## Required external deliverables
 

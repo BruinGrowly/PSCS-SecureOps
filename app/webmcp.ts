@@ -5,7 +5,7 @@ import {
   type Consequence,
   type Operation,
   type SecurityDecision,
-} from './lib/secureops';
+} from './lib/secureops.ts';
 
 type JsonObject = Record<string, unknown>;
 
@@ -28,6 +28,7 @@ declare global {
 
 type ToolBridge = {
   getGrant: (ticketId: string) => AuthorityGrant | null;
+  getExecutionLedger: () => Set<string>;
   onDecision: (decision: SecurityDecision, proposal: Consequence) => void;
 };
 
@@ -38,7 +39,6 @@ export const SECUREOPS_WEBMCP_TOOL_NAMES = [
   'get_security_trace',
 ] as const;
 
-const executionLedger = new Set<string>();
 const traceStore = new Map<string, SecurityDecision>();
 
 function toolResult(value: unknown) {
@@ -141,7 +141,7 @@ export async function registerSecureOpsTools(bridge: ToolBridge): Promise<AbortC
       const proposal = consequenceFrom(input);
       const decision = await inspectSecureOps(scenario, proposal, bridge.getGrant(ticketId), {
         consume: true,
-        ledger: executionLedger,
+        ledger: bridge.getExecutionLedger(),
       });
       traceStore.set(ticketId, decision);
       bridge.onDecision(decision, proposal);
