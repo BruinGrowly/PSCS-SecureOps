@@ -1,0 +1,36 @@
+name: Verify SecureOps
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.13.0'
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run deterministic security tests
+        run: npm run test
+
+      - name: Build ChatGPT Sites application
+        run: npm run build
+
+      - name: Lint source
+        run: npm run lint

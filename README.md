@@ -2,6 +2,8 @@
 
 **Authority-safe WebMCP for AI-assisted IT operations.**
 
+[**Open the live ChatGPT Site →**](https://pscs-secureops.warek21.chatgpt.site)
+
 Web content can tell an AI agent what to do. That does not give the content authority to make it happen.
 
 PSCS SecureOps is a challenge application that lets a WebMCP-capable browser agent read service tickets, propose structured actions, and attempt demo operations. Before any consequence is permitted, the app checks the independently issued human grant against the exact ticket, session, operation, target, payload digest, validity window, and single-use state.
