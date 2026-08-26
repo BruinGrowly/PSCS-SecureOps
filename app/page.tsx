@@ -95,7 +95,7 @@ export default function Home() {
           <div><strong>PSCS SecureOps</strong><span>Authority-safe agent operations</span></div>
         </div>
         <div className={`status-pill ${webMCPStatus}`}><span /> {statusCopy}</div>
-        <button className="operator-button" type="button">Operator · Wellington</button>
+        <button className="operator-button" type="button">Operator</button>
       </header>
 
       <div className="workspace">
